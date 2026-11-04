@@ -1,0 +1,1109 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конный Клуб: Мини-игры про лошадей</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        equestrian: {
+                            50: '#fdfbf7',
+                            100: '#f7f2e8',
+                            200: '#ebdcc5',
+                            300: '#dcc09c',
+                            400: '#cca071',
+                            500: '#bc834c',
+                            600: '#a3693f',
+                            700: '#835136',
+                            800: '#6d4332',
+                            900: '#5a382b',
+                        },
+                        meadow: {
+                            500: '#4caf50',
+                            600: '#43a047',
+                            700: '#388e3c',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles and animations */
+        .wood-pattern {
+            background-color: #835136;
+            background-image: radial-gradient(#6d4332 15%, transparent 16%), radial-gradient(#6d4332 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+        }
+        .sparkle-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: sparkleAnim 0.8s ease-out forwards;
+            font-size: 20px;
+        }
+        @keyframes sparkleAnim {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.3) rotate(180deg); opacity: 0.9; }
+            100% { transform: scale(0) rotate(360deg) translateY(-20px); opacity: 0; }
+        }
+        .dirt-patch {
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+        }
+        .tool-active {
+            ring: 4px solid #4caf50;
+            transform: scale(1.08);
+        }
+        /* Canvas responsive container */
+        #gameCanvas {
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 60%, #5d9e32 60%, #4c8a27 100%);
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="bg-equestrian-50 text-stone-800 min-h-screen flex flex-col font-sans select-none">
+
+    <!-- Header Navigation -->
+    <header class="bg-equestrian-800 text-amber-100 shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="showScreen('menu')">
+                <span class="text-3xl">🐴</span>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wide text-amber-200">Королевские Конюшни</h1>
+            </div>
+            
+            <!-- Progress / Stars summary -->
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center bg-equestrian-900/60 px-3 py-1.5 rounded-full border border-amber-500/30">
+                    <i class="fa-solid fa-star text-amber-400 mr-1.5 text-lg"></i>
+                    <span id="totalStars" class="font-bold text-amber-300">0</span>
+                    <span class="text-xs text-amber-200/70 ml-1">/ 9</span>
+                </div>
+                <button onclick="resetProgress()" title="Сбросить прогресс" class="text-xs text-amber-300/70 hover:text-amber-100 transition">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 flex flex-col">
+
+        <!-- SCREEN: MENU -->
+        <section id="screen-menu" class="space-y-6 my-auto py-6">
+            <div class="text-center max-w-2xl mx-auto space-y-2">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-equestrian-900">Добро пожаловать в Академию Верховой Езды!</h2>
+                <p class="text-stone-600">Освойте полный уход за лошадью: от бережной чистки и правильной седловки до настоящих соревнований по конкуру.</p>
+            </div>
+
+            <!-- Mini Games Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                
+                <!-- Game 1 Card -->
+                <div class="bg-white rounded-2xl shadow-lg border border-equestrian-200 overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col">
+                    <div class="h-40 bg-amber-100 flex items-center justify-center relative overflow-hidden">
+                        <span class="text-7xl">🪮</span>
+                        <div class="absolute top-3 right-3 bg-white/90 px-2.5 py-1 rounded-full text-xs font-bold text-amber-700 flex items-center gap-1">
+                            <i class="fa-solid fa-star text-amber-400"></i>
+                            <span id="stars-grooming">0/3</span>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div>
+                            <span class="text-xs font-bold tracking-wider uppercase text-equestrian-500">Этап 1</span>
+                            <h3 class="text-xl font-bold text-equestrian-900 mt-1">Чистка лошади</h3>
+                            <p class="text-sm text-stone-600 mt-2">Научитесь правильной последовательности ухода за шерстью, копытами и гривой с помощью профессионального инвентаря.</p>
+                        </div>
+                        <button onclick="startGrooming()" class="w-full py-3 bg-equestrian-600 hover:bg-equestrian-700 text-white font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-play"></i> Начать чистку
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Game 2 Card -->
+                <div class="bg-white rounded-2xl shadow-lg border border-equestrian-200 overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col">
+                    <div class="h-40 bg-amber-200/50 flex items-center justify-center relative overflow-hidden">
+                        <span class="text-7xl">🏇</span>
+                        <div class="absolute top-3 right-3 bg-white/90 px-2.5 py-1 rounded-full text-xs font-bold text-amber-700 flex items-center gap-1">
+                            <i class="fa-solid fa-star text-amber-400"></i>
+                            <span id="stars-saddling">0/3</span>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div>
+                            <span class="text-xs font-bold tracking-wider uppercase text-equestrian-500">Этап 2</span>
+                            <h3 class="text-xl font-bold text-equestrian-900 mt-1">Седловка (Английское седло)</h3>
+                            <p class="text-sm text-stone-600 mt-2">Правильно экипируйте лошадь: постелите вальтрап, оседлайте, затяните подпругу и надежьте уздечку с трензелем.</p>
+                        </div>
+                        <button onclick="startSaddling()" class="w-full py-3 bg-equestrian-600 hover:bg-equestrian-700 text-white font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-play"></i> Седлать лошадь
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Game 3 Card -->
+                <div class="bg-white rounded-2xl shadow-lg border border-equestrian-200 overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col">
+                    <div class="h-40 bg-emerald-100 flex items-center justify-center relative overflow-hidden">
+                        <span class="text-7xl">🏆</span>
+                        <div class="absolute top-3 right-3 bg-white/90 px-2.5 py-1 rounded-full text-xs font-bold text-amber-700 flex items-center gap-1">
+                            <i class="fa-solid fa-star text-amber-400"></i>
+                            <span id="stars-riding">0/3</span>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div>
+                            <span class="text-xs font-bold tracking-wider uppercase text-equestrian-500">Этап 3</span>
+                            <h3 class="text-xl font-bold text-equestrian-900 mt-1">Конный конкур</h3>
+                            <p class="text-sm text-stone-600 mt-2">Выезжайте на манеж! Управляйте аллюрами (шаг, рысь, галоп) и перепрыгивайте барьеры без штрафных очков.</p>
+                        </div>
+                        <button onclick="startRiding()" class="w-full py-3 bg-meadow-600 hover:bg-meadow-700 text-white font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-play"></i> Выехать на манеж
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SCREEN 1: GROOMING GAME -->
+        <section id="screen-grooming" class="hidden flex-1 flex flex-col space-y-4">
+            <!-- Header bar for game -->
+            <div class="bg-white p-4 rounded-xl shadow border border-equestrian-200 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <button onclick="showScreen('menu')" class="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-lg text-sm font-semibold transition">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> В меню
+                    </button>
+                    <h2 class="text-lg font-bold text-equestrian-900">Чистка лошади</h2>
+                </div>
+                <!-- Current Step Info -->
+                <div class="flex items-center space-x-2 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
+                    <span class="font-semibold text-amber-900 text-sm" id="groomStepTitle">Шаг 1: Крючок для копыт</span>
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full md:w-48 bg-stone-200 h-4 rounded-full overflow-hidden">
+                    <div id="groomProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Grooming Interactive Stage -->
+            <div class="flex-1 bg-white rounded-2xl shadow-lg border border-equestrian-200 p-4 flex flex-col md:flex-row gap-6 relative overflow-hidden">
+                
+                <!-- Horse Interactive SVG Viewport -->
+                <div class="flex-1 bg-amber-50/50 rounded-xl border border-amber-100 flex items-center justify-center relative min-h-[340px]" id="groomInteractiveArea">
+                    
+                    <!-- SVG Horse Diagram for Grooming -->
+                    <svg id="groomHorseSVG" viewBox="0 0 800 500" class="w-full max-w-xl h-auto select-none">
+                        <!-- Horse Body Base -->
+                        <g id="horseBase">
+                            <!-- Legs -->
+                            <path d="M 280,300 L 270,450 L 290,450 L 300,300 Z" fill="#835136"/>
+                            <path d="M 330,300 L 320,450 L 340,450 L 350,300 Z" fill="#6d4332"/>
+                            <path d="M 520,300 L 510,450 L 530,450 L 540,300 Z" fill="#835136"/>
+                            <path d="M 570,300 L 560,450 L 580,450 L 590,300 Z" fill="#6d4332"/>
+                            <!-- Hooves -->
+                            <path d="M 270,430 L 265,450 L 290,450 L 290,430 Z" fill="#2b1a13"/>
+                            <path d="M 320,430 L 315,450 L 340,450 L 340,430 Z" fill="#2b1a13"/>
+                            <path d="M 510,430 L 505,450 L 530,450 L 530,430 Z" fill="#2b1a13"/>
+                            <path d="M 560,430 L 555,450 L 580,450 L 580,430 Z" fill="#2b1a13"/>
+                            <!-- Body -->
+                            <ellipse cx="430" cy="270" rx="160" ry="90" fill="#835136"/>
+                            <!-- Neck & Head -->
+                            <path d="M 300,240 Q 240,150 200,100 L 150,140 Q 220,240 280,290 Z" fill="#835136"/>
+                            <path d="M 180,120 Q 140,110 120,140 Q 150,180 190,150 Z" fill="#835136"/>
+                            <!-- Ears -->
+                            <polygon points="190,95 200,70 210,95" fill="#835136"/>
+                            <!-- Eye & Muzzle -->
+                            <circle cx="165" cy="125" r="5" fill="#2b1a13"/>
+                            <circle cx="166" cy="124" r="1.5" fill="#ffffff"/>
+                            <path d="M 120,140 Q 125,160 140,155" fill="none" stroke="#5a382b" stroke-width="3"/>
+                            <!-- Mane Base -->
+                            <path id="groomManeArea" d="M 200,75 Q 230,130 280,210 Q 270,200 210,85 Z" fill="#422517" class="cursor-pointer"/>
+                            <!-- Tail -->
+                            <path d="M 580,240 Q 640,280 630,400 Q 600,350 570,270 Z" fill="#422517"/>
+                        </g>
+
+                        <!-- Dirt Overlays (Interactive Target Spots) -->
+                        <g id="dirtOverlayGroup">
+                            <!-- Hooves dirt -->
+                            <circle id="dirt-hoof1" class="dirt-patch" cx="277" cy="440" r="14" fill="#543d2b" opacity="0.85"/>
+                            <circle id="dirt-hoof2" class="dirt-patch" cx="520" cy="440" r="14" fill="#543d2b" opacity="0.85"/>
+                            
+                            <!-- Body Mud (Curry comb) -->
+                            <ellipse id="dirt-body1" class="dirt-patch" cx="420" cy="260" rx="45" ry="30" fill="#6e5033" opacity="0.8"/>
+                            <ellipse id="dirt-body2" class="dirt-patch" cx="340" cy="240" rx="35" ry="25" fill="#6e5033" opacity="0.8"/>
+
+                            <!-- Dust (Stiff Brush) -->
+                            <ellipse id="dust-body1" class="dirt-patch" cx="450" cy="250" rx="60" ry="35" fill="#d2b48c" opacity="0.75"/>
+                            <ellipse id="dust-body2" class="dirt-patch" cx="260" cy="180" rx="30" ry="40" fill="#d2b48c" opacity="0.75"/>
+
+                            <!-- Soft Shine spots (Soft Brush) -->
+                            <ellipse id="shine-body" class="dirt-patch" cx="390" cy="230" rx="70" ry="30" fill="#f5e6d3" opacity="0.6"/>
+
+                            <!-- Tangled Mane (Comb) -->
+                            <path id="tangled-mane" class="dirt-patch" d="M 205,80 Q 240,140 285,215" stroke="#2b1a13" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+                        </g>
+                    </svg>
+
+                    <!-- Floating Tool Cursor Follower -->
+                    <div id="toolFollower" class="hidden fixed pointer-events-none text-4xl z-50 transform -translate-x-1/2 -translate-y-1/2">
+                        🧹
+                    </div>
+                </div>
+
+                <!-- Tools Palette Sidebar -->
+                <div class="w-full md:w-64 bg-equestrian-50 p-4 rounded-xl border border-equestrian-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-equestrian-900 border-b border-equestrian-200 pb-2 mb-3">Инструменты чистки</h3>
+                        <p class="text-xs text-stone-500 mb-4" id="toolInstruction">Выберите первый инструмент по правилу ухода.</p>
+                        
+                        <div class="space-y-2.5" id="toolsList">
+                            <!-- Tool 1 -->
+                            <button onclick="selectGroomTool(1)" id="btn-tool-1" class="w-full p-2.5 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 hover:border-equestrian-400 text-left transition">
+                                <span class="text-2xl">🪝</span>
+                                <div>
+                                    <div class="text-sm font-bold text-stone-800">1. Крючок для копыт</div>
+                                    <div class="text-xs text-stone-500">Очистить грязь с подошвы</div>
+                                </div>
+                            </button>
+                            <!-- Tool 2 -->
+                            <button onclick="selectGroomTool(2)" id="btn-tool-2" class="w-full p-2.5 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 hover:border-equestrian-400 text-left transition opacity-50">
+                                <span class="text-2xl">🧽</span>
+                                <div>
+                                    <div class="text-sm font-bold text-stone-800">2. Скребница</div>
+                                    <div class="text-xs text-stone-500">Круговыми движениями</div>
+                                </div>
+                            </button>
+                            <!-- Tool 3 -->
+                            <button onclick="selectGroomTool(3)" id="btn-tool-3" class="w-full p-2.5 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 hover:border-equestrian-400 text-left transition opacity-50">
+                                <span class="text-2xl">🧹</span>
+                                <div>
+                                    <div class="text-sm font-bold text-stone-800">3. Жёсткая щётка</div>
+                                    <div class="text-xs text-stone-500">Смахнуть подсохшую грязь</div>
+                                </div>
+                            </button>
+                            <!-- Tool 4 -->
+                            <button onclick="selectGroomTool(4)" id="btn-tool-4" class="w-full p-2.5 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 hover:border-equestrian-400 text-left transition opacity-50">
+                                <span class="text-2xl">✨</span>
+                                <div>
+                                    <div class="text-sm font-bold text-stone-800">4. Мягкая щётка</div>
+                                    <div class="text-xs text-stone-500">Придать блеск шерсти</div>
+                                </div>
+                            </button>
+                            <!-- Tool 5 -->
+                            <button onclick="selectGroomTool(5)" id="btn-tool-5" class="w-full p-2.5 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 hover:border-equestrian-400 text-left transition opacity-50">
+                                <span class="text-2xl">💈</span>
+                                <div>
+                                    <div class="text-sm font-bold text-stone-800">5. Гребень для гривы</div>
+                                    <div class="text-xs text-stone-500">Расчесать волос</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="groomHintBox" class="mt-4 p-3 bg-amber-100/70 border border-amber-300 rounded-lg text-xs text-amber-900 flex items-start space-x-2">
+                        <i class="fa-solid fa-lightbulb text-amber-600 mt-0.5"></i>
+                        <span id="groomHintText">Кликните или проведите выбранным инструментом по загрязненным участкам лошади.</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SCREEN 2: SADDLING GAME -->
+        <section id="screen-saddling" class="hidden flex-1 flex flex-col space-y-4">
+            <!-- Top bar -->
+            <div class="bg-white p-4 rounded-xl shadow border border-equestrian-200 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <button onclick="showScreen('menu')" class="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-lg text-sm font-semibold transition">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> В меню
+                    </button>
+                    <h2 class="text-lg font-bold text-equestrian-900">Английская Седловка</h2>
+                </div>
+                <div class="text-sm font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200" id="saddleStepGuide">
+                    Шаг 1: Положите вальтрап на холку
+                </div>
+            </div>
+
+            <!-- Interactive Stage for Tack -->
+            <div class="flex-1 bg-white rounded-2xl shadow-lg border border-equestrian-200 p-4 flex flex-col lg:flex-row gap-6">
+                
+                <!-- Horse Mounting Viewport -->
+                <div class="flex-1 bg-amber-50/40 rounded-xl border border-amber-100 flex items-center justify-center relative min-h-[360px]" id="saddleCanvasArea">
+                    <svg id="saddleHorseSVG" viewBox="0 0 800 500" class="w-full max-w-xl h-auto select-none">
+                        <!-- Clean Horse Base -->
+                        <g>
+                            <path d="M 280,300 L 270,450 L 290,450 L 300,300 Z" fill="#835136"/>
+                            <path d="M 330,300 L 320,450 L 340,450 L 350,300 Z" fill="#6d4332"/>
+                            <path d="M 520,300 L 510,450 L 530,450 L 540,300 Z" fill="#835136"/>
+                            <path d="M 570,300 L 560,450 L 580,450 L 590,300 Z" fill="#6d4332"/>
+                            <ellipse cx="430" cy="270" rx="160" ry="90" fill="#835136"/>
+                            <path d="M 300,240 Q 240,150 200,100 L 150,140 Q 220,240 280,290 Z" fill="#835136"/>
+                            <path d="M 180,120 Q 140,110 120,140 Q 150,180 190,150 Z" fill="#835136"/>
+                            <polygon points="190,95 200,70 210,95" fill="#835136"/>
+                            <circle cx="165" cy="125" r="5" fill="#2b1a13"/>
+                            <!-- Mane -->
+                            <path d="M 200,75 Q 230,130 280,210 Q 270,200 210,85 Z" fill="#422517"/>
+                            <path d="M 580,240 Q 640,280 630,400 Q 600,350 570,270 Z" fill="#422517"/>
+                        </g>
+
+                        <!-- Target Zones Highlights -->
+                        <!-- Zone 1: Saddle Pad Back -->
+                        <rect id="zone-pad" x="350" y="180" width="140" height="90" rx="15" fill="#4caf50" fill-opacity="0.25" stroke="#388e3c" stroke-width="2" stroke-dasharray="6,6" class="cursor-pointer hover:fill-opacity-40"/>
+
+                        <!-- Equipment Layers (Initially Hidden) -->
+                        <!-- Layer 1: Saddle Pad -->
+                        <g id="layer-pad" class="hidden">
+                            <path d="M 350,210 C 370,185 450,185 480,215 L 475,270 C 420,280 390,280 345,260 Z" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>
+                            <path d="M 360,215 C 380,195 440,195 470,220" fill="none" stroke="#ffffff" stroke-width="2"/>
+                        </g>
+
+                        <!-- Layer 2: English Saddle -->
+                        <g id="layer-saddle" class="hidden">
+                            <path d="M 370,205 C 390,200 420,200 455,200 C 470,200 465,225 450,230 C 420,220 400,235 390,255 C 380,260 370,240 370,205 Z" fill="#3d2314" stroke="#23140b" stroke-width="2"/>
+                            <!-- Stirrup leather & iron -->
+                            <line x1="410" y1="225" x2="405" y2="310" stroke="#1a0f08" stroke-width="3"/>
+                            <rect x="398" y="308" width="15" height="8" rx="2" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="2"/>
+                        </g>
+
+                        <!-- Layer 3: Girth -->
+                        <g id="layer-girth" class="hidden">
+                            <path d="M 400,240 C 400,280 410,345 425,345 C 435,345 425,280 420,240 Z" fill="#111111" stroke="#333" stroke-width="1.5"/>
+                            <circle cx="412" cy="300" r="4" fill="#f1c40f"/>
+                        </g>
+
+                        <!-- Layer 4: Bridle & Bit -->
+                        <g id="layer-bridle" class="hidden">
+                            <!-- Reins -->
+                            <path d="M 145,148 Q 250,260 380,220" fill="none" stroke="#422517" stroke-width="3"/>
+                            <!-- Headstall -->
+                            <path d="M 190,100 L 175,135 L 140,145" fill="none" stroke="#2b1a13" stroke-width="3"/>
+                            <path d="M 190,105 L 142,145" fill="none" stroke="#2b1a13" stroke-width="2"/>
+                            <!-- Noseband -->
+                            <ellipse cx="145" cy="142" rx="12" ry="7" fill="none" stroke="#2b1a13" stroke-width="2.5"/>
+                            <!-- Bit ring -->
+                            <circle cx="143" cy="148" r="5" fill="none" stroke="#bdc3c7" stroke-width="3"/>
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Equipment Rack (Inventory) -->
+                <div class="w-full lg:w-72 bg-equestrian-50 p-4 rounded-xl border border-equestrian-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-equestrian-900 border-b border-equestrian-200 pb-2 mb-3">Амуничник</h3>
+                        <p class="text-xs text-stone-500 mb-4">Нажимайте на элемент снаряжения в правильном порядке традиционной седловки.</p>
+                        
+                        <div class="grid grid-cols-1 gap-3" id="tackInventory">
+                            
+                            <!-- Tack 1: Pad -->
+                            <button id="tack-btn-1" onclick="applyTack(1)" class="p-3 bg-white border-2 border-stone-200 rounded-xl flex items-center space-x-3 hover:border-amber-500 transition shadow-sm text-left">
+                                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center text-xl">🔻</div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-800">1. Вальтрап</div>
+                                    <div class="text-xs text-stone-500">Мягкая подкладка под седло</div>
+                                </div>
+                            </button>
+
+                            <!-- Tack 2: Saddle -->
+                            <button id="tack-btn-2" onclick="applyTack(2)" class="p-3 bg-white border-2 border-stone-200 rounded-xl flex items-center space-x-3 hover:border-amber-500 transition shadow-sm text-left opacity-50">
+                                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-xl">🏇</div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-800">2. Английское седло</div>
+                                    <div class="text-xs text-stone-500">Разместить строго поверх вальтрапа</div>
+                                </div>
+                            </button>
+
+                            <!-- Tack 3: Girth -->
+                            <button id="tack-btn-3" onclick="applyTack(3)" class="p-3 bg-white border-2 border-stone-200 rounded-xl flex items-center space-x-3 hover:border-amber-500 transition shadow-sm text-left opacity-50">
+                                <div class="w-10 h-10 bg-stone-200 rounded-lg flex items-center justify-center text-xl">🎗️</div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-800">3. Подпруга</div>
+                                    <div class="text-xs text-stone-500">Закрепить седло под животом</div>
+                                </div>
+                            </button>
+
+                            <!-- Tack 4: Bridle -->
+                            <button id="tack-btn-4" onclick="applyTack(4)" class="p-3 bg-white border-2 border-stone-200 rounded-xl flex items-center space-x-3 hover:border-amber-500 transition shadow-sm text-left opacity-50">
+                                <div class="w-10 h-10 bg-amber-200 rounded-lg flex items-center justify-center text-xl">🐴</div>
+                                <div>
+                                    <div class="font-bold text-sm text-stone-800">4. Уздечка с трензелем</div>
+                                    <div class="text-xs text-stone-500">Надеть на голову и вставить удила</div>
+                                </div>
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-amber-100/70 border border-amber-300 rounded-lg text-xs text-amber-900">
+                        <i class="fa-solid fa-circle-info mr-1 text-amber-700"></i>
+                        <span id="saddleTipText">Начните с размещения вальтрапа, чтобы защитить спину лошади от натирания.</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SCREEN 3: RIDING / SHOW JUMPING GAME -->
+        <section id="screen-riding" class="hidden flex-1 flex flex-col space-y-3">
+            <!-- HUD Control & Stats -->
+            <div class="bg-white p-3.5 rounded-xl shadow border border-equestrian-200 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <button onclick="showScreen('menu')" class="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-lg text-sm font-semibold transition">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> В меню
+                    </button>
+                    <span class="font-bold text-equestrian-900">Конкурный Паркур</span>
+                </div>
+
+                <!-- Game stats counters -->
+                <div class="flex items-center space-x-4 text-sm font-bold">
+                    <div class="bg-emerald-50 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-200">
+                        Успешных прыжков: <span id="scoreJumps" class="text-base">0</span> / 5
+                    </div>
+                    <div class="bg-red-50 text-red-700 px-3 py-1 rounded-lg border border-red-200">
+                        Штраф (сбито): <span id="scoreFaults" class="text-base">0</span>
+                    </div>
+                    <div class="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200">
+                        Время: <span id="gameTimer">00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Viewport -->
+            <div class="flex-1 relative rounded-2xl overflow-hidden shadow-xl border-2 border-equestrian-400 bg-emerald-800 flex items-center justify-center min-h-[380px]">
+                <canvas id="gameCanvas" width="900" height="420" class="w-full h-full block"></canvas>
+
+                <!-- On-Screen Start Overlay -->
+                <div id="ridingStartOverlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-6 text-center z-10">
+                    <h3 class="text-3xl font-extrabold mb-2 text-amber-300">Соревнования по Конкуру</h3>
+                    <p class="max-w-md text-sm text-stone-200 mb-6">Преодолейте 5 препятствий без ошибок! Используйте клавиши клавиатуры или кнопки на экране для разгона и прыжка.</p>
+                    <button onclick="initRidingGame()" class="px-8 py-3.5 bg-meadow-600 hover:bg-meadow-500 text-white font-extrabold text-lg rounded-xl shadow-lg transition transform hover:scale-105">
+                        <i class="fa-solid fa-flag-checkered mr-2"></i> Старт Заезда
+                    </button>
+                </div>
+            </div>
+
+            <!-- Touch / Screen Controls for Mobile & Desktop Easy Play -->
+            <div class="bg-white p-3 rounded-xl shadow border border-equestrian-200 flex flex-wrap justify-between items-center gap-2">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold text-stone-500 mr-2">Аллюр (Скорость):</span>
+                    <button onclick="setHorseSpeed(1)" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold">Шаг (1)</button>
+                    <button onclick="setHorseSpeed(2)" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg text-xs font-bold">Рысь (2)</button>
+                    <button onclick="setHorseSpeed(3)" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold">Галоп (3)</button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button onclick="triggerHorseJump()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow transition active:scale-95 flex items-center gap-2">
+                        <span>🦘 ПРЫЖОК</span> <span class="text-xs font-normal opacity-80">(Пробел / Стрелка Вверх)</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Dialog for Completion / Trophy -->
+    <div id="victoryModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border-4 border-amber-400 transform animate-bounce-short">
+            <div class="text-6xl mb-3">🏆</div>
+            <h3 class="text-2xl font-extrabold text-equestrian-900" id="modalTitle">Отличная работа!</h3>
+            <p class="text-sm text-stone-600 mt-2" id="modalMessage">Вы успешно завершили этапы ухода за лошадью!</p>
+
+            <div class="my-4 flex justify-center space-x-2 text-3xl" id="modalStars">
+                <i class="fa-solid fa-star text-amber-400"></i>
+                <i class="fa-solid fa-star text-amber-400"></i>
+                <i class="fa-solid fa-star text-amber-400"></i>
+            </div>
+
+            <button onclick="closeVictoryModal()" class="w-full py-3 bg-equestrian-700 hover:bg-equestrian-800 text-white font-bold rounded-xl shadow transition">
+                Продолжить
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        /* --- GAME PROGRESS & STATE MANAGEMENT --- */
+        let gameState = {
+            stars: {
+                grooming: 0,
+                saddling: 0,
+                riding: 0
+            }
+        };
+
+        // Load progress from localStorage
+        function loadProgress() {
+            const saved = localStorage.getItem('horse_club_progress');
+            if (saved) {
+                try {
+                    gameState = JSON.parse(saved);
+                } catch(e){}
+            }
+            updateProgressUI();
+        }
+
+        // Save progress to localStorage
+        function saveProgress() {
+            localStorage.setItem('horse_club_progress', JSON.stringify(gameState));
+            updateProgressUI();
+        }
+
+        function resetProgress() {
+            if (confirm("Вы уверены, что хотите сбросить весь пройденный прогресс и звёзды?")) {
+                gameState = { stars: { grooming: 0, saddling: 0, riding: 0 } };
+                saveProgress();
+            }
+        }
+
+        function updateProgressUI() {
+            const gStars = gameState.stars.grooming || 0;
+            const sStars = gameState.stars.saddling || 0;
+            const rStars = gameState.stars.riding || 0;
+            
+            document.getElementById('stars-grooming').innerText = `${gStars}/3`;
+            document.getElementById('stars-saddling').innerText = `${sStars}/3`;
+            document.getElementById('stars-riding').innerText = `${rStars}/3`;
+
+            const total = gStars + sStars + rStars;
+            document.getElementById('totalStars').innerText = total;
+        }
+
+        // Screen Navigation
+        function showScreen(screenId) {
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-grooming').classList.add('hidden');
+            document.getElementById('screen-saddling').classList.add('hidden');
+            document.getElementById('screen-riding').classList.add('hidden');
+
+            document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+
+            if (screenId !== 'riding' && ridingAnimationId) {
+                cancelAnimationFrame(ridingAnimationId);
+            }
+        }
+
+        // Web Audio Synthesizer for effects (No external audio file dependency)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'clean') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'tack') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'win') {
+                const now = audioCtx.currentTime;
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.setValueAtTime(450, now + 0.1);
+                osc.frequency.setValueAtTime(600, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'fault') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            }
+        }
+
+        /* --- MINI GAME 1: GROOMING LOGIC --- */
+        let currentGroomStep = 1;
+        let groomProgress = 0;
+        const groomStepNames = [
+            "",
+            "Шаг 1: Крючок для копыт (Очистите грязь с копыт)",
+            "Шаг 2: Резиновая скребница (Круговыми движениями)",
+            "Шаг 3: Жёсткая щётка (Смахните высохшую грязь)",
+            "Шаг 4: Мягкая щётка (Наведите блеск шерсти)",
+            "Шаг 5: Гребень для гривы (Расчешите гриву)"
+        ];
+
+        function startGrooming() {
+            showScreen('grooming');
+            currentGroomStep = 1;
+            groomProgress = 0;
+            resetGroomVisuals();
+            updateGroomStepUI();
+        }
+
+        function resetGroomVisuals() {
+            document.querySelectorAll('.dirt-patch').forEach(el => el.style.opacity = '0.85');
+            document.getElementById('shine-body').style.opacity = '0';
+            document.getElementById('tangled-mane').style.opacity = '0.9';
+        }
+
+        function selectGroomTool(step) {
+            if (step !== currentGroomStep) return;
+            
+            // Highlight tool button
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`btn-tool-${i}`);
+                if (i === step) {
+                    btn.classList.add('ring-2', 'ring-emerald-500', 'border-emerald-500');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-emerald-500', 'border-emerald-500');
+                }
+            }
+        }
+
+        function updateGroomStepUI() {
+            document.getElementById('groomStepTitle').innerText = groomStepNames[currentGroomStep];
+            document.getElementById('groomProgressBar').style.width = `${((currentGroomStep - 1) / 5) * 100}%`;
+
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`btn-tool-${i}`);
+                if (i < currentGroomStep) {
+                    btn.className = "w-full p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center space-x-3 text-left opacity-80";
+                } else if (i === currentGroomStep) {
+                    btn.className = "w-full p-2.5 bg-white border-2 border-emerald-500 rounded-xl flex items-center space-x-3 text-left shadow-md cursor-pointer";
+                } else {
+                    btn.className = "w-full p-2.5 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 text-left opacity-40 cursor-not-allowed";
+                }
+            }
+        }
+
+        // Grooming Interaction handling on SVG
+        document.getElementById('groomHorseSVG').addEventListener('click', function(e) {
+            handleGroomAction(e);
+        });
+
+        function handleGroomAction(e) {
+            playSound('clean');
+            spawnSparkles(e.clientX, e.clientY);
+
+            if (currentGroomStep === 1) { // Hoof pick
+                document.getElementById('dirt-hoof1').style.opacity = '0';
+                document.getElementById('dirt-hoof2').style.opacity = '0';
+                advanceGroomStep();
+            } else if (currentGroomStep === 2) { // Curry comb
+                document.getElementById('dirt-body1').style.opacity = '0.2';
+                document.getElementById('dirt-body2').style.opacity = '0.2';
+                advanceGroomStep();
+            } else if (currentGroomStep === 3) { // Stiff brush
+                document.getElementById('dust-body1').style.opacity = '0';
+                document.getElementById('dust-body2').style.opacity = '0';
+                document.getElementById('dirt-body1').style.opacity = '0';
+                document.getElementById('dirt-body2').style.opacity = '0';
+                advanceGroomStep();
+            } else if (currentGroomStep === 4) { // Soft brush
+                document.getElementById('shine-body').style.opacity = '0.8';
+                advanceGroomStep();
+            } else if (currentGroomStep === 5) { // Mane comb
+                document.getElementById('tangled-mane').style.opacity = '0';
+                document.getElementById('groomProgressBar').style.width = '100%';
+                
+                // Complete Grooming Game
+                gameState.stars.grooming = 3;
+                saveProgress();
+                showVictoryModal("Лошадь идеально вычищена!", "Шерсть и грива блестят, копыта в полном порядке. Теперь можно переходить к седловке!");
+            }
+        }
+
+        function advanceGroomStep() {
+            currentGroomStep++;
+            updateGroomStepUI();
+        }
+
+        function spawnSparkles(x, y) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle-particle';
+            sparkle.innerText = '✨';
+            sparkle.style.left = `${x}px`;
+            sparkle.style.top = `${y}px`;
+            document.body.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 800);
+        }
+
+        /* --- MINI GAME 2: SADDLING LOGIC --- */
+        let currentSaddleStep = 1;
+        const saddleStepTips = [
+            "",
+            "1. Положите вальтрап на холку и слегка сдвиньте назад по росту шерсти.",
+            "2. Разместите английское седло аккуратно по центру вальтрапа.",
+            "3. Застегните подпругу снизу для фиксации седла.",
+            "4. Надежьте уздечку, вложите трензель в рот и расправьте поводья."
+        ];
+
+        function startSaddling() {
+            showScreen('saddling');
+            currentSaddleStep = 1;
+            resetSaddleVisuals();
+            updateSaddleUI();
+        }
+
+        function resetSaddleVisuals() {
+            document.getElementById('layer-pad').classList.add('hidden');
+            document.getElementById('layer-saddle').classList.add('hidden');
+            document.getElementById('layer-girth').classList.add('hidden');
+            document.getElementById('layer-bridle').classList.add('hidden');
+        }
+
+        function updateSaddleUI() {
+            document.getElementById('saddleStepGuide').innerText = saddleStepTips[currentSaddleStep];
+            document.getElementById('saddleTipText').innerText = saddleStepTips[currentSaddleStep];
+
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`tack-btn-${i}`);
+                if (i < currentSaddleStep) {
+                    btn.className = "p-3 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex items-center space-x-3 text-left opacity-80";
+                } else if (i === currentSaddleStep) {
+                    btn.className = "p-3 bg-white border-2 border-amber-500 rounded-xl flex items-center space-x-3 text-left shadow-md cursor-pointer animate-pulse";
+                } else {
+                    btn.className = "p-3 bg-white border border-stone-200 rounded-xl flex items-center space-x-3 text-left opacity-40 cursor-not-allowed";
+                }
+            }
+        }
+
+        function applyTack(step) {
+            if (step !== currentSaddleStep) return;
+
+            playSound('tack');
+
+            if (step === 1) {
+                document.getElementById('layer-pad').classList.remove('hidden');
+            } else if (step === 2) {
+                document.getElementById('layer-saddle').classList.remove('hidden');
+            } else if (step === 3) {
+                document.getElementById('layer-girth').classList.remove('hidden');
+            } else if (step === 4) {
+                document.getElementById('layer-bridle').classList.remove('hidden');
+                
+                // Completed Saddling Game
+                gameState.stars.saddling = 3;
+                saveProgress();
+                showVictoryModal("Лошадь полностью поседлана!", "Английская экипировка надета правильно и надежно. Лошадь готова к выезду на конкурище!");
+                return;
+            }
+
+            currentSaddleStep++;
+            updateSaddleUI();
+        }
+
+
+        /* --- MINI GAME 3: SHOW JUMPING (CANVAS GAME) --- */
+        let canvas = document.getElementById('gameCanvas');
+        let ctx = canvas.getContext('2d');
+        let ridingAnimationId = null;
+
+        let horse = {
+            x: 100,
+            y: 270,
+            groundY: 270,
+            vy: 0,
+            isJumping: false,
+            speedState: 1, // 1: Step, 2: Trot, 3: Gallop
+            animFrame: 0
+        };
+
+        let obstacles = [];
+        let scoreJumps = 0;
+        let scoreFaults = 0;
+        let gameTimeSeconds = 0;
+        let gameTimerInterval = null;
+        let isRidingActive = false;
+
+        function startRiding() {
+            showScreen('riding');
+            document.getElementById('ridingStartOverlay').classList.remove('hidden');
+        }
+
+        function initRidingGame() {
+            document.getElementById('ridingStartOverlay').classList.add('hidden');
+            horse.x = 100;
+            horse.y = horse.groundY;
+            horse.vy = 0;
+            horse.isJumping = false;
+            horse.speedState = 2; // Default trot
+
+            scoreJumps = 0;
+            scoreFaults = 0;
+            gameTimeSeconds = 0;
+            isRidingActive = true;
+
+            document.getElementById('scoreJumps').innerText = '0';
+            document.getElementById('scoreFaults').innerText = '0';
+
+            // Generate 5 obstacles spaced out
+            obstacles = [
+                { x: 700, cleared: false, hit: false },
+                { x: 1200, cleared: false, hit: false },
+                { x: 1700, cleared: false, hit: false },
+                { x: 2200, cleared: false, hit: false },
+                { x: 2700, cleared: false, hit: false },
+            ];
+
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            gameTimerInterval = setInterval(() => {
+                if (isRidingActive) {
+                    gameTimeSeconds++;
+                    let mins = String(Math.floor(gameTimeSeconds / 60)).padStart(2, '0');
+                    let secs = String(gameTimeSeconds % 60).padStart(2, '0');
+                    document.getElementById('gameTimer').innerText = `${mins}:${secs}`;
+                }
+            }, 1000);
+
+            if (ridingAnimationId) cancelAnimationFrame(ridingAnimationId);
+            ridingGameLoop();
+        }
+
+        function setHorseSpeed(state) {
+            horse.speedState = state;
+        }
+
+        function triggerHorseJump() {
+            if (!horse.isJumping && isRidingActive) {
+                horse.isJumping = true;
+                horse.vy = -12; // Jump force
+                playSound('clean');
+            }
+        }
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if (!isRidingActive) return;
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                triggerHorseJump();
+            } else if (e.code === 'Digit1') {
+                setHorseSpeed(1);
+            } else if (e.code === 'Digit2') {
+                setHorseSpeed(2);
+            } else if (e.code === 'Digit3') {
+                setHorseSpeed(3);
+            }
+        });
+
+        function ridingGameLoop() {
+            updateRiding();
+            renderRiding();
+
+            if (isRidingActive) {
+                ridingAnimationId = requestAnimationFrame(ridingGameLoop);
+            }
+        }
+
+        function updateRiding() {
+            let speedPx = horse.speedState * 3.5;
+
+            // Apply gravity to jump
+            if (horse.isJumping) {
+                horse.y += horse.vy;
+                horse.vy += 0.6; // Gravity
+
+                if (horse.y >= horse.groundY) {
+                    horse.y = horse.groundY;
+                    horse.isJumping = false;
+                    horse.vy = 0;
+                }
+            }
+
+            horse.animFrame += 0.15 * horse.speedState;
+
+            // Move obstacles towards horse
+            for (let obs of obstacles) {
+                obs.x -= speedPx;
+
+                // Check collision/jump
+                let horseBox = { left: horse.x, right: horse.x + 60, top: horse.y - 40, bottom: horse.y + 20 };
+                let obsBox = { left: obs.x, right: obs.x + 25, top: 260, bottom: 310 };
+
+                if (!obs.cleared && !obs.hit) {
+                    // Check if horse successfully jumped over
+                    if (horseBox.right > obsBox.left && horseBox.left < obsBox.right) {
+                        if (horseBox.bottom > obsBox.top) {
+                            // Hit obstacle
+                            obs.hit = true;
+                            scoreFaults++;
+                            document.getElementById('scoreFaults').innerText = scoreFaults;
+                            playSound('fault');
+                        }
+                    } else if (horseBox.left > obsBox.right && !obs.hit) {
+                        // Successfully cleared
+                        obs.cleared = true;
+                        scoreJumps++;
+                        document.getElementById('scoreJumps').innerText = scoreJumps;
+                        playSound('clean');
+                    }
+                }
+            }
+
+            // Check Win condition (All 5 obstacles passed)
+            const lastObs = obstacles[obstacles.length - 1];
+            if (lastObs.x < horse.x - 50 && isRidingActive) {
+                isRidingActive = false;
+                clearInterval(gameTimerInterval);
+
+                let earnedStars = 3;
+                if (scoreFaults >= 3) earnedStars = 1;
+                else if (scoreFaults > 0) earnedStars = 2;
+
+                gameState.stars.riding = Math.max(gameState.stars.riding || 0, earnedStars);
+                saveProgress();
+
+                showVictoryModal(
+                    "Маршрут конкурa пройден!",
+                    `Вы успешно преодолели дистанцию. Успешных прыжков: ${scoreJumps}, Штрафных очков: ${scoreFaults}.`
+                );
+            }
+        }
+
+        function renderRiding() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background (Sky, Arena Fence, Grass)
+            // Grass ground
+            ctx.fillStyle = '#4c8a27';
+            ctx.fillRect(0, 290, canvas.width, 130);
+
+            // Sand Arena track
+            ctx.fillStyle = '#dcc09c';
+            ctx.fillRect(0, 310, canvas.width, 80);
+
+            // Arena Fence
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 280); ctx.lineTo(canvas.width, 280);
+            ctx.moveTo(0, 295); ctx.lineTo(canvas.width, 295);
+            ctx.stroke();
+
+            for (let x = 0; x < canvas.width; x += 80) {
+                ctx.fillRect(x, 270, 8, 35);
+            }
+
+            // Draw Obstacles (Show Jumping Barriers)
+            for (let obs of obstacles) {
+                if (obs.x > -50 && obs.x < canvas.width + 50) {
+                    // Barrier posts
+                    ctx.fillStyle = '#a3693f';
+                    ctx.fillRect(obs.x, 240, 8, 70);
+                    ctx.fillRect(obs.x + 25, 240, 8, 70);
+
+                    // Rails (Red/White poles)
+                    if (!obs.hit) {
+                        drawPole(obs.x + 4, 260);
+                        drawPole(obs.x + 4, 280);
+                    } else {
+                        // Knocked down poles
+                        drawPole(obs.x + 10, 305);
+                    }
+                }
+            }
+
+            // Draw Horse & Rider
+            drawCanvasHorse(horse.x, horse.y, horse.isJumping, horse.animFrame);
+        }
+
+        function drawPole(x, y) {
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(x, y, 20, 6);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x + 5, y, 5, 6);
+            ctx.fillRect(x + 15, y, 5, 6);
+        }
+
+        function drawCanvasHorse(x, y, isJumping, frame) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Jump Tilt angle
+            if (isJumping) {
+                ctx.rotate(-0.15);
+            }
+
+            // Horse Body
+            ctx.fillStyle = '#835136';
+            ctx.beginPath();
+            ctx.ellipse(30, 0, 28, 16, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Neck & Head
+            ctx.beginPath();
+            ctx.moveTo(15, -8);
+            ctx.lineTo(-5, -28);
+            ctx.lineTo(-18, -20);
+            ctx.lineTo(5, 5);
+            ctx.fill();
+
+            // Legs Animation
+            let legAngle = Math.sin(frame) * 0.4;
+            ctx.strokeStyle = '#6d4332';
+            ctx.lineWidth = 4;
+
+            // Leg 1
+            ctx.beginPath();
+            ctx.moveTo(10, 10);
+            ctx.lineTo(10 + Math.sin(legAngle) * 15, 30);
+            ctx.stroke();
+
+            // Leg 2
+            ctx.beginPath();
+            ctx.moveTo(45, 10);
+            ctx.lineTo(45 - Math.sin(legAngle) * 15, 30);
+            ctx.stroke();
+
+            // Rider (Simplified silhouette)
+            ctx.fillStyle = '#2c3e50'; // Jacket
+            ctx.fillRect(20, -22, 10, 15);
+            ctx.fillStyle = '#f1c40f'; // Helmet
+            ctx.beginPath();
+            ctx.arc(25, -26, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        /* --- VICTORY MODAL LOGIC --- */
+        function showVictoryModal(title, message) {
+            playSound('win');
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('victoryModal').classList.remove('hidden');
+        }
+
+        function closeVictoryModal() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            showScreen('menu');
+        }
+
+        // Initialize App on load
+        window.onload = function() {
+            loadProgress();
+        };
+    </script>
+</body>
+</html>
+```
